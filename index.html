@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Nano Mozo</title>
+
+<!-- PWA: instalable en el celular del mozo, con ícono propio y sin la barra del navegador -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161209">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nano Mozo">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Misma paleta que nano-panel (negro + dorado del logo), para que se vea de la misma
+     familia visual — ver nano-panel/index.html para el original. */
+  :root{
+    --bg:#F2EEE3; --bg-soft:#FAF7EF; --bg-deep:#E7DFC9;
+    --ink:#1D1911; --ink-secondary:#6B6252; --ink-muted:#9C9382;
+    --surface:#FFFFFF; --surface-alt:#F7F2E6; --surface-tint:#EFE6D2;
+    --border:#E3DABF; --border-soft:#ECE4D1; --border-strong:#C7BB9B;
+    --navy:#161209; --navy-soft:#252017;
+    --accent:#D6A02E; --accent-light:#E8BE5C; --accent-soft:#F5E3B4;
+    --tipo-mesa:#C98A00; --tipo-mesa-bg:#FFF1D1; --tipo-mesa-border:#EFC358; --tipo-mesa-ink:#5C3E00;
+    --danger:#D42F22; --danger-bg:#FCE0DC; --danger-border:#F2A398;
+    --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --radius-xl:30px;
+    --shadow-sm:0 1px 3px rgba(29,25,17,0.06); --shadow-md:0 10px 26px rgba(29,25,17,0.12);
+    --display:'Outfit',sans-serif; --body:'Inter',-apple-system,sans-serif;
+    --transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{margin:0;background:var(--bg);font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit}
+
+  .topbar{
+    position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:14px 18px;
+    display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:16px;
+  }
+  .topbar .back{
+    background:none;border:none;color:var(--accent-light);font-family:var(--body);font-weight:700;
+    font-size:13px;cursor:pointer;padding:6px 0;
+  }
+  #app{max-width:520px;margin:0 auto;padding:16px 16px 110px}
+
+  /* ---------- Gate de entrada (clave de mozo) ---------- */
+  #gateOverlay{
+    position:fixed;inset:0;background:linear-gradient(180deg,var(--bg),var(--bg-deep));display:flex;
+    align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  #gateOverlay .box{
+    width:100%;max-width:300px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-lg);padding:28px 24px;text-align:center;box-shadow:var(--shadow-md);
+  }
+  #gateOverlay h2{font-family:var(--display);font-size:17px;margin-bottom:6px;color:var(--ink);font-weight:700}
+  #gateOverlay p{font-size:12px;color:var(--ink-secondary);margin-bottom:18px}
+  #gateOverlay input{
+    width:100%;padding:12px 14px;border-radius:var(--radius-md);border:1.5px solid var(--border);
+    background:var(--surface-alt);color:var(--ink);font-family:var(--body);font-size:14px;text-align:center;
+    letter-spacing:0.15em;margin-bottom:10px;outline:none;
+  }
+  #gateOverlay input:focus{border-color:var(--accent)}
+  #gateOverlay button.entrar{
+    width:100%;padding:12px;border-radius:var(--radius-md);border:1.5px solid var(--accent);
+    background:var(--accent);color:#1D1911;font-family:var(--body);
+    font-weight:700;font-size:13px;cursor:pointer;transition:var(--transition);
+  }
+  #gateOverlay button.entrar:hover{background:var(--accent-light);border-color:var(--accent-light)}
+  #gateOverlay button.entrar:active{transform:scale(0.97)}
+  #gateOverlay .err{color:var(--danger);font-size:11.5px;margin-top:8px;min-height:14px;font-weight:600}
+
+  /* ---------- Lista de mesas ---------- */
+  .mesas-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .mesas-head h1{font-family:var(--display);font-size:22px;font-weight:800;color:var(--ink)}
+  .refresh-btn{
+    background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);
+    padding:8px 14px;font-size:12px;font-weight:700;color:var(--ink-secondary);cursor:pointer;
+  }
+  .refresh-btn:active{transform:scale(0.96)}
+  .sector-bloque{margin-bottom:26px}
+  .sector-titulo{font-family:var(--display);font-weight:800;font-size:13px;color:var(--ink-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px}
+  .mapa-mesas{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:12px}
+  .mesa-celda{
+    aspect-ratio:1;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:var(--transition);border:2px solid var(--border);background:var(--surface);
+    box-shadow:var(--shadow-sm);
+  }
+  .mesa-celda:active{transform:scale(0.95)}
+  .mesa-celda .num{font-family:var(--display);font-size:22px;font-weight:900;color:var(--ink);line-height:1}
+  .empty-state{color:var(--ink-muted);text-align:center;padding:60px 20px;font-size:14px}
+
+  /* ---------- Armar pedido (portado de nano-panel/index.html, sección "Nuevo pedido") ---------- */
+  .np-mesa-actual{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;
+    background:var(--tipo-mesa-bg);border:1.5px solid var(--tipo-mesa-border);border-radius:var(--radius-md);
+    font-size:13px;color:var(--tipo-mesa-ink);font-weight:600;
+  }
+  .np-mesa-actual b{font-family:var(--display);font-size:15px}
+  .np-mesa-actual a{margin-left:auto;color:var(--accent);font-weight:700;text-decoration:none;font-size:12px}
+
+  .np-cat-heading{font-family:var(--display);font-weight:800;font-size:18px;color:var(--ink);letter-spacing:-0.01em;margin:2px 0 12px}
+  .np-cats{
+    display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:0 -16px 0;padding-left:16px;padding-right:16px;
+    scrollbar-width:none;position:sticky;top:50px;background:var(--bg);z-index:15;
+  }
+  .np-cats::-webkit-scrollbar{display:none}
+  .np-cats button{
+    flex:0 0 auto;display:flex;align-items:center;gap:7px;font-family:var(--body);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:var(--radius-xl);
+    border:1.5px solid var(--border);background:var(--surface);color:var(--ink-secondary);cursor:pointer;
+    transition:var(--transition);white-space:nowrap;box-shadow:var(--shadow-sm);
+  }
+  .np-cats .np-cat-ico{font-size:15px;line-height:1}
+  .np-cats button.active{background:var(--accent);border-color:var(--accent);color:#1D1911}
+
+  /* Una sola columna, tarjetas grandes — a diferencia de nano-panel (que tenía grilla de
+     escritorio), acá cada producto es una fila completa pensada para el pulgar. */
+  .np-grid{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+  .np-card{
+    background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-lg);padding:14px 16px;
+    display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);transition:var(--transition);
+  }
+  .np-card.tiene-qty{border-color:var(--accent);border-width:2px}
+  .np-card-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .np-card-info{min-width:0}
+  .np-card-nombre{font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink);line-height:1.3}
+  .np-card-precio{font-family:var(--display);font-weight:800;font-size:15px;color:var(--accent);margin-top:2px}
+  .np-nota-link{background:none;border:none;color:var(--accent);font-size:11.5px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+  .np-nota-chip{display:inline-flex;font-size:11px;color:var(--tipo-mesa-ink);background:var(--tipo-mesa-bg);border:1px solid var(--tipo-mesa-border);padding:3px 8px;border-radius:var(--radius-sm);font-weight:700}
+  .np-nota-input{width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 10px;color:var(--ink);font-size:12.5px;font-family:var(--body);outline:none}
+  .np-nota-input:focus{border-color:var(--accent)}
+  .np-card-footer{flex-shrink:0}
+  .np-add-btn{
+    padding:0 20px;height:40px;border-radius:var(--radius-md);border:1.5px solid var(--accent);cursor:pointer;
+    background:var(--accent);color:#1D1911;font-family:var(--body);
+    font-size:13px;font-weight:800;letter-spacing:0.01em;transition:var(--transition);white-space:nowrap;
+  }
+  .np-add-btn:active{transform:scale(0.96)}
+  .np-stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface-alt);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:6px}
+  .np-stepper button{
+    width:36px;height:36px;flex-shrink:0;border-radius:var(--radius-sm);border:none;background:var(--surface);color:var(--ink);font-weight:800;font-size:17px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);
+  }
+  .np-stepper button:active{transform:scale(0.92)}
+  .np-stepper .qty{font-family:var(--display);font-weight:800;font-size:15px;min-width:22px;text-align:center}
+
+  .np-combo-card{
+    border-radius:var(--radius-lg);padding:16px;background:linear-gradient(160deg,var(--tipo-mesa-bg),var(--surface) 60%);
+    border:1.5px dashed var(--tipo-mesa-border);
+  }
+  .np-combo-card h4{font-family:var(--display);font-size:14px;margin-bottom:3px;color:var(--ink)}
+  .np-combo-card p{font-size:12px;color:var(--ink-secondary);margin-bottom:12px}
+  .np-combo-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .np-combo-row select{
+    flex:1;min-width:140px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px;font-size:13px;font-family:var(--body);color:var(--ink);cursor:pointer;
+  }
+  .np-combo-toggle{display:flex;gap:8px;margin-bottom:10px}
+  .np-combo-toggle button{
+    flex:1;padding:10px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);
+    color:var(--ink-secondary);font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .np-combo-toggle button.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .np-combo-foot{display:flex;align-items:center;justify-content:space-between}
+  .np-combo-foot b{font-family:var(--display);color:var(--accent);font-size:15px}
+
+  /* ---------- Barra flotante del carrito ---------- */
+  .np-cartbar{
+    position:fixed;left:0;right:0;bottom:0;background:var(--navy);color:#fff;
+    padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;justify-content:space-between;z-index:60;box-shadow:0 -10px 30px rgba(0,0,0,0.25);
+  }
+  .np-cartbar-info{display:flex;flex-direction:column;font-size:11.5px;color:rgba(255,255,255,0.7);font-weight:600}
+  .np-cartbar-info b{font-family:var(--display);font-size:19px;color:#fff}
+  .np-cartbar-btn{
+    background:var(--accent);border:1.5px solid var(--accent);color:#1D1911;font-family:var(--body);
+    font-weight:800;font-size:13.5px;padding:13px 22px;border-radius:var(--radius-md);cursor:pointer;
+  }
+  .np-cartbar-btn:active{transform:scale(0.96)}
+
+  /* ---------- Overlays (revisión / confirmación) ---------- */
+  .np-overlay{position:fixed;inset:0;background:rgba(11,23,22,0.55);display:flex;align-items:center;justify-content:center;z-index:90;padding:20px}
+  .np-review-box{width:100%;max-width:420px;max-height:82vh;background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);display:flex;flex-direction:column;overflow:hidden}
+  .np-review-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border-soft);font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink)}
+  .overlay-close{background:none;border:none;font-size:18px;color:var(--ink-muted);cursor:pointer;line-height:1;padding:4px}
+  .np-review-lista{overflow-y:auto;padding:6px 18px}
+  .np-review-item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13px;color:var(--ink)}
+  .np-review-item .nom{font-weight:600}
+  .np-review-item .nota{display:block;font-size:11px;color:var(--accent);font-weight:600;margin-top:1px}
+  .np-review-item .del{background:none;border:none;color:var(--ink-muted);cursor:pointer;font-size:17px;line-height:1;padding:0 4px}
+  .np-review-total{display:flex;justify-content:space-between;padding:14px 18px;font-family:var(--display);font-weight:800;font-size:16px;color:var(--ink);border-top:1px solid var(--border-soft)}
+  .np-review-box .cerrar-mesa-btn{margin:0 18px 18px;width:auto}
+  .cerrar-mesa-btn{
+    padding:13px;border-radius:var(--radius-md);border:1.5px solid var(--tipo-mesa);
+    background:var(--tipo-mesa);color:#fff;font-family:var(--body);font-weight:700;
+    font-size:13px;letter-spacing:0.02em;cursor:pointer;
+  }
+  .cerrar-mesa-btn:active{transform:scale(0.97)}
+  .cerrar-mesa-btn:disabled{opacity:0.5;cursor:default}
+
+  .np-confirm-box{max-width:360px}
+  .np-confirm-msg{padding:18px;font-size:14px;line-height:1.5;color:var(--ink)}
+  .np-confirm-acciones{display:flex;gap:10px;padding:0 18px 18px}
+  .ui-confirm-btn{
+    flex:1;padding:12px;border-radius:var(--radius-md);border:1.5px solid var(--border);cursor:pointer;
+    font-family:var(--body);font-weight:700;font-size:13px;
+  }
+  .ui-confirm-btn:active{transform:scale(0.97)}
+  .ui-confirm-btn-cancel{background:var(--surface-alt);border-color:var(--border-strong);color:var(--ink)}
+  .ui-confirm-btn-ok{background:var(--tipo-mesa);border-color:var(--tipo-mesa);color:#fff}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);
+    color:#fff;padding:12px 20px;border-radius:var(--radius-md);font-size:13px;
+    font-family:var(--body);font-weight:500;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;
+    max-width:340px;text-align:center;z-index:110;border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 14px 34px rgba(24,43,45,0.35);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+
+  body.ui-locked{pointer-events:none;opacity:0.85}
+</style>
+</head>
+<body>
+
+<div id="gateOverlay" style="display:none">
+  <div class="box">
+    <h2>Nano Mozo</h2>
+    <p>Ingresá la clave para cargar pedidos de mesa</p>
+    <input type="password" id="gateInput" placeholder="Clave" autocomplete="off">
+    <button class="entrar" onclick="intentarLoginMozo()">Entrar</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="topbar">🔥 Nano Mozo</div>
+
+<div id="app">
+
+  <div id="vistaMesas">
+    <div class="mesas-head">
+      <h1>Mesas</h1>
+      <button class="refresh-btn" onclick="cargarMesas()">Actualizar</button>
+    </div>
+    <div id="mesasGrid"><div class="empty-state">Cargando mesas…</div></div>
+  </div>
+
+  <div id="vistaProductos" style="display:none">
+    <div class="np-mesa-actual">
+      Pedido para <b id="npMesaLabel">—</b>
+      <a href="#" onclick="volverAMesas();return false;">cambiar de mesa</a>
+    </div>
+    <div class="np-cats" id="npCats"></div>
+    <div class="np-cat-heading" id="npCatHeading"></div>
+    <div class="np-grid" id="npGrid"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="np-cartbar" id="npCartbar" style="display:none">
+  <div class="np-cartbar-info">
+    <span id="npCartCount">0 ítems</span>
+    <b id="npCartTotal">$0</b>
+  </div>
+  <button class="np-cartbar-btn" onclick="abrirRevisionPedido()">Revisar pedido →</button>
+</div>
+
+<div id="npRevisionOverlay" class="np-overlay" style="display:none">
+  <div class="np-review-box">
+    <div class="np-review-head">
+      <span id="npRevisionTitulo">Mesa —</span>
+      <button class="overlay-close" onclick="cerrarRevisionPedido()">✕</button>
+    </div>
+    <div id="npRevisionLista" class="np-review-lista"></div>
+    <div class="np-review-total"><span>Total</span><b id="npRevisionTotal">$0</b></div>
+    <button class="cerrar-mesa-btn" id="npConfirmarBtn" onclick="confirmarPedido()">Confirmar y enviar</button>
+  </div>
+</div>
+
+<div id="uiConfirmOverlay" class="np-overlay" style="display:none">
+  <div class="np-review-box np-confirm-box">
+    <div class="np-review-head"><span>Nano Mozo</span></div>
+    <div class="np-confirm-msg" id="uiConfirmMsg"></div>
+    <div class="np-confirm-acciones">
+      <button class="ui-confirm-btn ui-confirm-btn-cancel" id="uiConfirmCancelBtn" onclick="uiConfirmResolver(false)">Cancelar</button>
+      <button class="ui-confirm-btn ui-confirm-btn-ok" id="uiConfirmOkBtn" onclick="uiConfirmResolver(true)">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================= CONFIG (mismo contrato que nano-panel/index.html) ======================= */
+const WEBAPP_URL = 'https://hmfsqgacoxfpfvhvfzsq.supabase.co/functions/v1/api';
+const SUPABASE_ANON_KEY = 'sb_publishable_rsbuuHshmfgdYfNK9Ir2Hg_QtAHbTQV';
+const SUPABASE_HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY };
+function fetchGet(url){ return fetch(url, { headers: SUPABASE_HEADERS }); }
+
+// Mismo DEVICE_TOKEN que nano-panel — tiene que coincidir con el secret DEVICE_TOKEN de la
+// Edge Function. No es un secreto de verdad (queda a la vista acá), solo frena pegarle a la
+// API sin pasar por esta app; la clave de mozo (más abajo) es la que de verdad protege.
+const DEVICE_TOKEN = 'a0f020c9d0d7dc8481d395b388efcade0097723f3ad1b80b';
+
+/* ======================= LOGIN (clave de mozo — separada de la del panel) =======================
+   sessionStorage puede tirar una excepción en vez de simplemente fallar (Safari en modo
+   privado, algunos navegadores embebidos, file:// en ciertos contextos) — sin este try/catch
+   esa excepción corta la ejecución del script acá mismo y ni el gate llega a mostrarse. */
+function storageGet(key){ try { return sessionStorage.getItem(key); } catch { return null; } }
+function storageSet(key, val){ try { sessionStorage.setItem(key, val); } catch {} }
+function storageRemove(key){ try { sessionStorage.removeItem(key); } catch {} }
+
+let mozoAutenticado = storageGet('mozo_autenticado') === '1';
+let MOZO_CLAVE = storageGet('mozo_clave_entrada') || '';
+if(!mozoAutenticado){
+  document.getElementById('gateOverlay').style.display = 'flex';
+} else {
+  iniciar();
+}
+
+function intentarLoginMozo(){
+  const val = document.getElementById('gateInput').value.trim();
+  const err = document.getElementById('gateErr');
+  if(!val){ err.textContent = 'Ingresá la clave'; return; }
+  postAction('loginMozo', { clave: val }).then(res => {
+    if(!res.ok){ err.textContent = 'Clave incorrecta'; return; }
+    MOZO_CLAVE = val;
+    mozoAutenticado = true;
+    storageSet('mozo_autenticado', '1');
+    storageSet('mozo_clave_entrada', val);
+    document.getElementById('gateOverlay').style.display = 'none';
+    iniciar();
+  });
+}
+
+function forzarRelogin(){
+  mozoAutenticado = false;
+  MOZO_CLAVE = '';
+  storageRemove('mozo_autenticado');
+  storageRemove('mozo_clave_entrada');
+  document.getElementById('gateOverlay').style.display = 'flex';
+}
+
+document.getElementById('gateInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') intentarLoginMozo();
+});
+
+function iniciar(){
+  cargarMesas();
+}
+
+/* ======================= RED (mismo patrón que nano-panel: postAction/fetchGetProtegido) ======================= */
+function postAction(action, data){
+  return fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...SUPABASE_HEADERS },
+    body: JSON.stringify({ action, device_token: DEVICE_TOKEN, clave_entrada: MOZO_CLAVE, ...data }),
+  }).then(r => r.json()).then(res => {
+    if(res && res.error === 'clave_entrada_incorrecta') forzarRelogin();
+    return res;
+  }).catch(() => ({ ok:false, error:'sin_conexion' }));
+}
+
+function fetchGetProtegido(action, params={}){
+  const qs = new URLSearchParams({ action, device_token: DEVICE_TOKEN, clave_entrada: MOZO_CLAVE, ...params });
+  return fetchGet(`${WEBAPP_URL}?${qs.toString()}`).then(r => r.json()).then(res => {
+    if(res && res.error === 'clave_entrada_incorrecta') forzarRelogin();
+    return res;
+  });
+}
+
+/* ======================= MODAL DE ALERTA/CONFIRMACIÓN (igual que nano-panel) ======================= */
+let uiConfirmResolve = null;
+function uiConfirmResolver(valor){
+  document.getElementById('uiConfirmOverlay').style.display = 'none';
+  const resolve = uiConfirmResolve;
+  uiConfirmResolve = null;
+  if(resolve) resolve(valor);
+}
+function uiConfirm(mensaje){
+  return new Promise(resolve => {
+    uiConfirmResolve = resolve;
+    document.getElementById('uiConfirmMsg').textContent = mensaje;
+    document.getElementById('uiConfirmOverlay').style.display = 'flex';
+  });
+}
+
+function formatPrecio(n){ return '$' + Math.round(Number(n) || 0).toLocaleString('es-AR'); }
+
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+let uiBloqueada = false;
+function lockUI(){ uiBloqueada = true; document.body.classList.add('ui-locked'); }
+function unlockUI(){ uiBloqueada = false; document.body.classList.remove('ui-locked'); }
+
+const CAJA_MOTIVO_MSG = {
+  caja_cerrada: '⚠️ La caja está cerrada. Avisale al encargado antes de tomar pedidos.',
+  caja_dia_anterior_sin_cerrar: '⚠️ Hay una caja de un día anterior sin cerrar. Avisale al encargado.',
+};
+
+/* ======================= MESAS (portado de nano-panel: isSiJs, agruparMesasPorSector) ======================= */
+function isSiJs(v){ return String(v).trim().toUpperCase() === 'SI'; }
+
+function agruparMesasPorSector(lista){
+  const porSector = {};
+  lista.forEach(m => {
+    const sector = m.sector && String(m.sector).trim() ? String(m.sector).trim() : 'Sin sector';
+    (porSector[sector] = porSector[sector] || []).push(m);
+  });
+  const sectores = Object.keys(porSector).sort((a,b) => {
+    if(a === 'Sin sector') return 1;
+    if(b === 'Sin sector') return -1;
+    return a.localeCompare(b, 'es');
+  });
+  return { porSector, sectores };
+}
+
+let mesasData = [];
+
+function cargarMesas(){
+  document.getElementById('mesasGrid').innerHTML = '<div class="empty-state">Cargando mesas…</div>';
+  fetchGetProtegido('listarMesas').then(res => {
+    if(!res.ok){ document.getElementById('mesasGrid').innerHTML = '<div class="empty-state">No se pudo cargar el mapa de mesas</div>'; return; }
+    mesasData = res.mesas;
+    renderMesas();
+  });
+}
+
+function renderMesas(){
+  const activas = mesasData.filter(m => isSiJs(m.activa)).sort((a,b) => Number(a.mesa) - Number(b.mesa));
+  const el = document.getElementById('mesasGrid');
+  if(!activas.length){ el.innerHTML = '<div class="empty-state">No hay mesas activas</div>'; return; }
+  const { porSector, sectores } = agruparMesasPorSector(activas);
+  el.innerHTML = sectores.map(sector => `
+    <div class="sector-bloque">
+      <div class="sector-titulo">${sector}</div>
+      <div class="mapa-mesas">
+        ${porSector[sector].map(m => `<div class="mesa-celda" onclick="elegirMesa('${m.mesa}')"><span class="num">${m.mesa}</span></div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+/* ======================= ARMAR PEDIDO (portado casi verbatim de nano-panel, sección "Nuevo pedido") ======================= */
+let pedido = { mesa: null, cart: {}, comboCart: [] };
+let menuData = { categorias: [], productos: [] };
+let catActiva = null;
+let docenaState = {};
+
+function hayPedidoSinConfirmar(){
+  return Object.keys(pedido.cart).length > 0 || pedido.comboCart.length > 0;
+}
+
+function elegirMesa(mesa){
+  pedido = { mesa, cart: {}, comboCart: [] };
+  document.getElementById('vistaMesas').style.display = 'none';
+  document.getElementById('vistaProductos').style.display = 'block';
+  document.getElementById('npMesaLabel').textContent = 'Mesa ' + mesa;
+  updateNpCartbar();
+  cargarMenu();
+}
+
+function volverAMesas(){
+  const ir = () => {
+    document.getElementById('vistaProductos').style.display = 'none';
+    document.getElementById('vistaMesas').style.display = 'block';
+    pedido = { mesa: null, cart: {}, comboCart: [] };
+    updateNpCartbar();
+    cargarMesas();
+  };
+  if(!hayPedidoSinConfirmar()){ ir(); return; }
+  uiConfirm('Tenés ítems sin enviar en esta mesa, ¿salir igual y perderlos?').then(ok => { if(ok) ir(); });
+}
+
+function cargarMenu(){
+  if(menuData.categorias.length){ catActiva = catActiva || menuData.categorias[0].id; renderNpCats(); renderNpGrid(); return; }
+  fetchGet(`${WEBAPP_URL}?action=menu&canal=mesa`)
+    .then(r => r.json())
+    .then(res => {
+      menuData.categorias = res.categorias || [];
+      menuData.productos = res.productos || [];
+      catActiva = menuData.categorias[0] ? menuData.categorias[0].id : null;
+      renderNpCats();
+      renderNpGrid();
+    })
+    .catch(() => showToast('No se pudo cargar el menú'));
+}
+
+function npFindProducto(id){ return menuData.productos.find(p => p.id === id); }
+function npItemsOf(catId){ return menuData.productos.filter(p => p.categoria_id === catId); }
+
+// Aclaraciones obligatorias por categoría — tal cual nano-panel, no reinventar (si mañana
+// cambia el menú/las categorías de cocina, portar el cambio desde ahí).
+function opcionesRequeridas(catId,nombre){
+  if(catId==='empanadas'){
+    const grupos=[{label:'¿Al horno o fritas?',opciones:['Al horno','Fritas']}];
+    if(/por unidad/i.test(nombre||'')){
+      const sabores=npItemsOf(catId).filter(p=>!/por unidad/i.test(p.nombre)).map(p=>p.nombre);
+      grupos.unshift({label:'Sabor',opciones:sabores});
+    }
+    return grupos;
+  }
+  if(catId==='milanesas')return[{label:'¿De carne o de pollo?',opciones:['De carne','De pollo']}];
+  if(catId==='pastas')return[{label:'Salsa',opciones:['Con salsa de estofado de carne','Con salsa bolognesa','Con salsa de crema']}];
+  if(catId==='postres'&&/budin/i.test(nombre||''))return[{label:'¿Con crema o con dulce de leche?',opciones:['Con crema','Con dulce de leche']}];
+  return null;
+}
+
+const NP_CAT_EMOJI = {
+  pizzas:'🍕', empanadas:'🥟', entradas:'🧀', ensaladas:'🥗', guarniciones:'🍟',
+  milanesas:'🍗', hamburguesas:'🍔', lomitos:'🥪', miga:'🥪', pastas:'🍝',
+  elaborados:'🍽️', postres:'🍰', bebidas:'🥤',
+  bebidas_sin_alcohol:'🥤', cervezas_y_vinos:'🍻', cervezas:'🍺', vinos:'🍷',
+};
+const NP_CAT_EMOJI_KEYWORDS = [
+  [/cerveza/i, '🍺'], [/vino/i, '🍷'], [/sin alcohol|gaseosa|jugo|agua/i, '🥤'],
+  [/trago|cocktail|cóctel/i, '🍹'], [/bebida/i, '🥤'],
+];
+function npCatEmoji(id, nombre){
+  if(NP_CAT_EMOJI[id]) return NP_CAT_EMOJI[id];
+  const match = NP_CAT_EMOJI_KEYWORDS.find(([re]) => re.test(nombre || '') || re.test(id || ''));
+  return match ? match[1] : '🍽️';
+}
+
+function renderNpCats(){
+  document.getElementById('npCats').innerHTML = menuData.categorias.map(c =>
+    `<button class="${c.id===catActiva?'active':''}" onclick="npSetCat('${c.id}')"><span class="np-cat-ico">${npCatEmoji(c.id, c.nombre)}</span><span>${c.nombre}</span></button>`
+  ).join('');
+  const activa = menuData.categorias.find(c => c.id === catActiva);
+  document.getElementById('npCatHeading').textContent = activa ? activa.nombre : '';
+}
+
+function npSetCat(id){
+  catActiva = id;
+  renderNpCats();
+  renderNpGrid();
+}
+
+function renderNpGrid(){
+  const cat = menuData.categorias.find(c => c.id === catActiva);
+  const el = document.getElementById('npGrid');
+  if(!cat){ el.innerHTML = ''; return; }
+  const items = npItemsOf(cat.id);
+  el.innerHTML = items.map(npProductCardHtml).join('') + npRenderComboCard(cat);
+  items.forEach(p => {
+    const entry = pedido.cart[p.id] || { qty: 0 };
+    renderNpStepper(p.id, entry.qty);
+    renderNpNota(p.id, entry);
+  });
+}
+
+function npProductCardHtml(p){
+  return `<div class="np-card" id="np-card-${p.id}">
+    <div class="np-card-row">
+      <div class="np-card-info">
+        <div class="np-card-nombre">${p.nombre}</div>
+        <div class="np-card-precio">${formatPrecio(p.precio)}</div>
+      </div>
+      <div class="np-card-footer" id="np-stepper-${p.id}"></div>
+    </div>
+    <div id="np-nota-${p.id}"></div>
+  </div>`;
+}
+
+function renderNpStepper(id, qty){
+  const holder = document.getElementById('np-stepper-' + id); if(!holder) return;
+  holder.innerHTML = qty === 0
+    ? `<button class="np-add-btn" onclick="npChangeQty('${id}',1)">Agregar</button>`
+    : `<div class="np-stepper"><button onclick="npChangeQty('${id}',-1)">−</button><span class="qty">${qty}</span><button onclick="npChangeQty('${id}',1)">+</button></div>`;
+  const card = document.getElementById('np-card-' + id);
+  if(card) card.classList.toggle('tiene-qty', qty > 0);
+}
+
+function renderNpNota(id, entry){
+  const holder = document.getElementById('np-nota-' + id); if(!holder) return;
+  if(!entry || entry.qty === 0){ holder.innerHTML = ''; return; }
+  const p = npFindProducto(id);
+  const grupos = p ? opcionesRequeridas(p.categoria_id, p.nombre) : null;
+  const opciones = entry.opciones || [];
+  const opcionesHtml = grupos ? grupos.map((g,i) => `<select class="np-nota-input" style="margin-bottom:6px" onchange="npGuardarOpcion('${id}',${i},this.value)">
+      <option value="" disabled ${opciones[i]?'':'selected'}>${g.label} (obligatorio)</option>
+      ${g.opciones.map(o=>`<option value="${o}" ${opciones[i]===o?'selected':''}>${o}</option>`).join('')}
+    </select>`).join('') : '';
+  let notaHtml;
+  if(entry.showInput){
+    notaHtml = `<input class="np-nota-input" placeholder="Ej: sin cebolla, bien cocido..." value="${entry.note||''}" onblur="npGuardarNota('${id}',this.value)">`;
+  } else if(entry.note){
+    notaHtml = `<span class="np-nota-chip">📝 ${entry.note}</span> <button class="np-nota-link" onclick="npToggleNota('${id}')">editar</button>`;
+  } else {
+    notaHtml = `<button class="np-nota-link" onclick="npToggleNota('${id}')">＋ agregar aclaración</button>`;
+  }
+  holder.innerHTML = opcionesHtml + notaHtml;
+  if(entry.showInput) setTimeout(() => { const inp = holder.querySelector('input'); if(inp) inp.focus(); }, 0);
+}
+function npToggleNota(id){ pedido.cart[id].showInput = true; renderNpNota(id, pedido.cart[id]); }
+function npGuardarNota(id, val){
+  if(!pedido.cart[id]) return;
+  pedido.cart[id].note = val.trim();
+  pedido.cart[id].showInput = false;
+  renderNpNota(id, pedido.cart[id]);
+}
+function npGuardarOpcion(id, grupoIdx, val){
+  if(!pedido.cart[id]) return;
+  const opciones = (pedido.cart[id].opciones || []).slice();
+  opciones[grupoIdx] = val;
+  pedido.cart[id].opciones = opciones;
+  renderNpNota(id, pedido.cart[id]);
+}
+
+function npChangeQty(id, delta){
+  const cur = pedido.cart[id] || { qty: 0, note: '' };
+  const next = Math.max(0, cur.qty + delta);
+  if(next === 0) delete pedido.cart[id]; else pedido.cart[id] = { ...cur, qty: next };
+  renderNpStepper(id, next);
+  renderNpNota(id, pedido.cart[id] || { qty: 0 });
+  updateNpCartbar();
+}
+
+/* ---------- Mitad y mitad / docena, igual que nano-panel ---------- */
+function npRenderComboCard(cat){
+  if(cat.permite_mitad) return npRenderHalfCard(cat);
+  if(cat.vendido_por_docena) return npRenderDocenaCard(cat);
+  return '';
+}
+
+function npRenderHalfCard(cat){
+  const opts = npItemsOf(cat.id);
+  if(opts.length < 2) return '';
+  return `<div class="np-combo-card">
+    <h4>🍕 Mitad y mitad</h4>
+    <p>Elegí dos sabores para combinar. El precio es el promedio.</p>
+    <div class="np-combo-row">
+      <select id="npHalfA-${cat.id}" onchange="npUpdateHalfPrice('${cat.id}')">${opts.map(o=>`<option value="${o.id}">${o.nombre}</option>`).join('')}</select>
+      <select id="npHalfB-${cat.id}" onchange="npUpdateHalfPrice('${cat.id}')">${opts.map((o,i)=>`<option value="${o.id}" ${i===1?'selected':''}>${o.nombre}</option>`).join('')}</select>
+    </div>
+    <div class="np-combo-foot">
+      <b id="npHalfPrice-${cat.id}">${formatPrecio((Number(opts[0].precio)+Number(opts[1].precio))/2)}</b>
+      <button class="np-add-btn" onclick="npAddHalf('${cat.id}')">Agregar</button>
+    </div>
+  </div>`;
+}
+
+function npUpdateHalfPrice(catId){
+  const a = npFindProducto(document.getElementById('npHalfA-'+catId).value);
+  const b = npFindProducto(document.getElementById('npHalfB-'+catId).value);
+  document.getElementById('npHalfPrice-'+catId).textContent = formatPrecio((Number(a.precio)+Number(b.precio))/2);
+}
+
+function npAddHalf(catId){
+  const a = npFindProducto(document.getElementById('npHalfA-'+catId).value);
+  const b = npFindProducto(document.getElementById('npHalfB-'+catId).value);
+  if(a.id === b.id){ showToast('Elegí dos sabores distintos'); return; }
+  const price = (Number(a.precio) + Number(b.precio)) / 2;
+  const cat = menuData.categorias.find(c => c.id === catId);
+  const key = 'combo-' + a.id + '-' + b.id;
+  const existing = pedido.comboCart.find(c => c.key === key);
+  if(existing) existing.qty += 1;
+  else pedido.comboCart.push({ key, aId:a.id, bId:b.id, name:`Mitad ${a.nombre} / mitad ${b.nombre}`, price, qty:1, catName: cat?cat.nombre:'' });
+  updateNpCartbar();
+  showToast('Agregado al pedido');
+}
+
+function npRenderDocenaCard(cat){
+  const opts = npItemsOf(cat.id).filter(p => !/por unidad/i.test(p.nombre));
+  if(!opts.length) return '';
+  const grupoCoccion = opcionesRequeridas(cat.id, '')?.[0] || null;
+  docenaState[cat.id] = { tamano:'docena', mitad:false, opcion:'' };
+  return `<div class="np-combo-card">
+    <h4>🥟 Armá tu pedido</h4>
+    <p>Los precios de la lista son por docena. Elegí el tamaño y, si querés, combiná dos sabores.</p>
+    <div class="np-combo-toggle">
+      <button class="active" id="npDocSize-docena-${cat.id}" onclick="npSetDocenaSize('${cat.id}','docena')">Docena</button>
+      <button id="npDocSize-media-${cat.id}" onclick="npSetDocenaSize('${cat.id}','media')">Media docena</button>
+    </div>
+    <div class="np-combo-row">
+      <select id="npDocA-${cat.id}" onchange="npUpdateDocenaPrice('${cat.id}')">${opts.map(o=>`<option value="${o.id}">${o.nombre}</option>`).join('')}</select>
+    </div>
+    <div class="np-combo-toggle">
+      <button class="active" id="npDocMitad-off-${cat.id}" onclick="npSetDocenaMitad('${cat.id}',false)">Un solo sabor</button>
+      <button id="npDocMitad-on-${cat.id}" onclick="npSetDocenaMitad('${cat.id}',true)">Mitad y mitad</button>
+    </div>
+    <div class="np-combo-row" id="npDocBWrap-${cat.id}" style="display:none;">
+      <select id="npDocB-${cat.id}" onchange="npUpdateDocenaPrice('${cat.id}')">${opts.map((o,i)=>`<option value="${o.id}" ${i===1?'selected':''}>${o.nombre}</option>`).join('')}</select>
+    </div>
+    ${grupoCoccion ? `<div class="np-combo-row">
+      <select id="npDocOpcion-${cat.id}" onchange="npSetDocenaOpcion('${cat.id}',this.value)">
+        <option value="" selected disabled>${grupoCoccion.label} (obligatorio)</option>
+        ${grupoCoccion.opciones.map(o=>`<option value="${o}">${o}</option>`).join('')}
+      </select>
+    </div>` : ''}
+    <div class="np-combo-foot">
+      <b id="npDocPrice-${cat.id}">${formatPrecio(opts[0].precio)}</b>
+      <button class="np-add-btn" onclick="npAddDocena('${cat.id}')">Agregar</button>
+    </div>
+  </div>`;
+}
+function npSetDocenaOpcion(catId, val){ docenaState[catId].opcion = val; }
+
+function npSetActiveBtn(activeId, allIds){ allIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('active', id===activeId); }); }
+
+function npSetDocenaSize(catId, tamano){
+  docenaState[catId].tamano = tamano;
+  npSetActiveBtn('npDocSize-'+tamano+'-'+catId, ['npDocSize-docena-'+catId,'npDocSize-media-'+catId]);
+  npUpdateDocenaPrice(catId);
+}
+
+function npSetDocenaMitad(catId, on){
+  docenaState[catId].mitad = on;
+  npSetActiveBtn('npDocMitad-'+(on?'on':'off')+'-'+catId, ['npDocMitad-off-'+catId,'npDocMitad-on-'+catId]);
+  document.getElementById('npDocBWrap-'+catId).style.display = on ? 'flex' : 'none';
+  npUpdateDocenaPrice(catId);
+}
+
+function npUpdateDocenaPrice(catId){
+  const st = docenaState[catId];
+  const a = npFindProducto(document.getElementById('npDocA-'+catId).value);
+  let base = Number(a.precio);
+  if(st.mitad){
+    const b = npFindProducto(document.getElementById('npDocB-'+catId).value);
+    base = (Number(a.precio) + Number(b.precio)) / 2;
+  }
+  const price = st.tamano === 'media' ? base / 2 : base;
+  document.getElementById('npDocPrice-'+catId).textContent = formatPrecio(price);
+}
+
+function npAddDocena(catId){
+  const st = docenaState[catId];
+  const cat = menuData.categorias.find(c => c.id === catId);
+  if(opcionesRequeridas(catId, '') && !st.opcion){ showToast('Elegí si las querés al horno o fritas'); return; }
+  const a = npFindProducto(document.getElementById('npDocA-'+catId).value);
+  let base = Number(a.precio), nombre = a.nombre;
+  if(st.mitad){
+    const b = npFindProducto(document.getElementById('npDocB-'+catId).value);
+    if(a.id === b.id){ showToast('Elegí dos sabores distintos'); return; }
+    base = (Number(a.precio) + Number(b.precio)) / 2;
+    nombre = `Mitad ${a.nombre} / mitad ${b.nombre}`;
+  }
+  const esMedia = st.tamano === 'media';
+  const price = esMedia ? base / 2 : base;
+  const label = (esMedia ? 'Media docena de ' : 'Docena de ') + nombre;
+  const bId = st.mitad ? document.getElementById('npDocB-'+catId).value : '';
+  const key = 'docena-' + catId + '-' + a.id + '-' + bId + '-' + st.tamano + '-' + (st.opcion||'');
+  const existing = pedido.comboCart.find(c => c.key === key);
+  if(existing) existing.qty += 1;
+  else pedido.comboCart.push({ key, aId:a.id, bId, esMediaDocena:esMedia, name:label, price, qty:1, catName: cat?cat.nombre:'', desc: st.opcion||'' });
+  updateNpCartbar();
+  showToast('Agregado al pedido');
+}
+
+/* ---------- Carrito flotante / revisión / confirmación ---------- */
+function npAllCartLines(){
+  const regular = Object.entries(pedido.cart).map(([id, entry]) => {
+    const item = npFindProducto(id);
+    const cat = menuData.categorias.find(c => c.id === item.categoria_id);
+    const grupos = opcionesRequeridas(item.categoria_id, item.nombre);
+    const opciones = entry.opciones || [];
+    const desc = [...opciones, entry.note].filter(Boolean).join(' · ');
+    const faltaOpcion = !!grupos && grupos.some((g,i) => !opciones[i]);
+    return { key:id, name:item.nombre, desc, price:Number(item.precio), qty:entry.qty, catName: cat?cat.nombre:'', faltaOpcion };
+  });
+  return [...regular, ...pedido.comboCart];
+}
+
+function npCartTotal(lines){ return lines.reduce((s,l) => s + l.price*l.qty, 0); }
+
+function updateNpCartbar(){
+  const lines = npAllCartLines();
+  const count = lines.reduce((s,l) => s + l.qty, 0);
+  const bar = document.getElementById('npCartbar');
+  if(count === 0){ bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  document.getElementById('npCartCount').textContent = `${count} ítem${count>1?'s':''}`;
+  document.getElementById('npCartTotal').textContent = formatPrecio(npCartTotal(lines));
+}
+
+function abrirRevisionPedido(){
+  const lines = npAllCartLines();
+  document.getElementById('npRevisionTitulo').textContent = 'Mesa ' + pedido.mesa;
+  const el = document.getElementById('npRevisionLista');
+  el.innerHTML = lines.length === 0
+    ? '<div class="empty-state">Todavía no agregaste nada</div>'
+    : lines.map(l => `<div class="np-review-item">
+        <span class="nom">${l.qty}× ${l.catName ? `<span style="color:var(--ink-muted);font-weight:600">${l.catName}</span> - ` : ''}${l.name}${l.desc?`<span class="nota">📝 ${l.desc}</span>`:''}${l.faltaOpcion?`<span class="nota" style="color:#c0392b">⚠ Falta elegir una opción — volvé a la lista y seleccionala</span>`:''}</span>
+        <span style="display:flex;align-items:center;gap:8px">${formatPrecio(l.price*l.qty)}<button class="del" onclick="npRemoveLine('${l.key}')">✕</button></span>
+      </div>`).join('');
+  document.getElementById('npRevisionTotal').textContent = formatPrecio(npCartTotal(lines));
+  const btnConfirmar = document.getElementById('npConfirmarBtn');
+  btnConfirmar.style.display = lines.length === 0 ? 'none' : 'block';
+  btnConfirmar.disabled = lines.some(l => l.faltaOpcion);
+  document.getElementById('npRevisionOverlay').style.display = 'flex';
+}
+
+function cerrarRevisionPedido(){
+  document.getElementById('npRevisionOverlay').style.display = 'none';
+}
+
+function npRemoveLine(key){
+  if(pedido.cart[key]) delete pedido.cart[key];
+  else { const idx = pedido.comboCart.findIndex(c => c.key === key); if(idx > -1) pedido.comboCart.splice(idx, 1); }
+  renderNpStepper(key, 0); // no-op si no era un producto simple visible en la grilla
+  updateNpCartbar();
+  abrirRevisionPedido();
+}
+
+function npBuildItemsForApi(lines){
+  return lines.map(l => {
+    if(l.aId){
+      return { producto_id:l.aId, cantidad:l.qty, nota:l.desc||'', es_mitad_y_mitad:!!l.bId, combinado_con:l.bId||'', es_media_docena:!!l.esMediaDocena };
+    }
+    return { producto_id:l.key, cantidad:l.qty, nota:l.desc||'', es_mitad_y_mitad:false, combinado_con:'', es_media_docena:false };
+  });
+}
+
+// A diferencia de nano-panel (que después de confirmar vuelve a la lista de pedidos), acá el
+// mozo se queda en la misma mesa con el carrito vacío — así puede cargar otra ronda enseguida
+// sin tener que volver a elegirla. "Cambiar de mesa" (arriba) es la salida explícita.
+function confirmarPedido(){
+  if(uiBloqueada) return;
+  const lines = npAllCartLines();
+  if(lines.length === 0) return;
+  if(lines.some(l => l.faltaOpcion)){ showToast('Falta elegir una opción obligatoria en algún ítem'); return; }
+  lockUI();
+  const btn = document.getElementById('npConfirmarBtn');
+  btn.textContent = 'Enviando...';
+
+  postAction('crearPedidoPanel', { tipo:'mesa', mesa: pedido.mesa, items: npBuildItemsForApi(lines) }).then(res => {
+    if(!res.ok){
+      showToast(CAJA_MOTIVO_MSG[res.error] || ('No se pudo enviar el pedido: ' + (res.error||'')));
+      return;
+    }
+    const mesaEnviada = pedido.mesa;
+    pedido.cart = {};
+    pedido.comboCart = [];
+    cerrarRevisionPedido();
+    renderNpGrid();
+    updateNpCartbar();
+    showToast(`Pedido enviado — Mesa ${mesaEnviada}`);
+  }).finally(() => { unlockUI(); btn.textContent = 'Confirmar y enviar'; });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Nano Mozo",
+  "short_name": "Nano Mozo",
+  "description": "Cargar pedidos de mesa desde el celular — Nano Resto Bar",
+  "id": "./index.html",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161209",
+  "theme_color": "#161209",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
