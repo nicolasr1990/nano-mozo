@@ -229,6 +229,17 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
 
+  .update-banner{
+    position:sticky;top:0;z-index:80;background:var(--accent);color:#1D1911;
+    display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+    padding:10px 16px;font-family:var(--body);font-size:13px;font-weight:700;
+  }
+  .update-banner button{
+    background:#1D1911;color:#fff;border:none;padding:7px 16px;border-radius:var(--radius-xl);
+    font-family:var(--body);font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .update-banner button:active{transform:scale(0.96)}
+
   body.ui-locked{pointer-events:none;opacity:0.85}
 </style>
 </head>
@@ -245,6 +256,11 @@
 </div>
 
 <div class="topbar">🔥 Nano Mozo</div>
+
+<div class="update-banner" id="updateBanner" style="display:none">
+  <span>🔄 Hay una actualización lista</span>
+  <button onclick="location.reload()">Actualizar ahora</button>
+</div>
 
 <div id="app">
 
@@ -858,6 +874,25 @@ function confirmarPedido(){
     cargarMesas();
     showToast(`Pedido enviado — Mesa ${mesaEnviada}`);
   }).finally(() => { unlockUI(); btn.textContent = 'Confirmar y enviar'; });
+}
+
+/* ======================= PWA: instalación + actualización automática =======================
+   Mismo criterio que nano-panel/sw.js: red primero, así que con conexión cualquier recarga
+   ya trae lo último. El aviso de arriba es solo por si alguien deja la app abierta varios
+   días sin recargar nunca — no se recarga sola para no cortar un pedido a mitad de cargar. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      setInterval(() => reg.update(), 60 * 60 * 1000);
+    }).catch(err => console.warn('No se pudo registrar el service worker:', err));
+  });
+
+  let avisoYaMostrado = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(avisoYaMostrado) return;
+    avisoYaMostrado = true;
+    document.getElementById('updateBanner').style.display = 'flex';
+  });
 }
 </script>
 </body>
