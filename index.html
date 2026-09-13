@@ -27,6 +27,7 @@
     --navy:#161209; --navy-soft:#252017;
     --accent:#D6A02E; --accent-light:#E8BE5C; --accent-soft:#F5E3B4;
     --tipo-mesa:#C98A00; --tipo-mesa-bg:#FFF1D1; --tipo-mesa-border:#EFC358; --tipo-mesa-ink:#5C3E00;
+    --success:#178A46; --success-bg:#D6F4E2; --success-border:#7FDBA6;
     --danger:#D42F22; --danger-bg:#FCE0DC; --danger-border:#F2A398;
     --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --radius-xl:30px;
     --shadow-sm:0 1px 3px rgba(29,25,17,0.06); --shadow-md:0 10px 26px rgba(29,25,17,0.12);
@@ -91,6 +92,13 @@
   }
   .mesa-celda:active{transform:scale(0.95)}
   .mesa-celda .num{font-family:var(--display);font-size:22px;font-weight:900;color:var(--ink);line-height:1}
+  .mesa-celda.libre{background:var(--success-bg);border-color:var(--success-border)}
+  .mesa-celda.libre .num{color:var(--success)}
+  .mesa-celda.ocupada{background:var(--tipo-mesa-bg);border-color:var(--tipo-mesa-border)}
+  .mesa-celda.ocupada .num{color:var(--tipo-mesa-ink)}
+  .mesas-leyenda{display:flex;gap:16px;margin-bottom:16px;font-size:11.5px;color:var(--ink-secondary);font-weight:600}
+  .mesas-leyenda span{display:flex;align-items:center;gap:6px}
+  .mesas-leyenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .empty-state{color:var(--ink-muted);text-align:center;padding:60px 20px;font-size:14px}
 
   /* ---------- Armar pedido (portado de nano-panel/index.html, sección "Nuevo pedido") ---------- */
@@ -244,6 +252,10 @@
     <div class="mesas-head">
       <h1>Mesas</h1>
       <button class="refresh-btn" onclick="cargarMesas()">Actualizar</button>
+    </div>
+    <div class="mesas-leyenda">
+      <span><i style="background:var(--success-bg);border:1.5px solid var(--success-border)"></i>Libre</span>
+      <span><i style="background:var(--tipo-mesa-bg);border:1.5px solid var(--tipo-mesa-border)"></i>Ocupada</span>
     </div>
     <div id="mesasGrid"><div class="empty-state">Cargando mesas…</div></div>
   </div>
@@ -445,7 +457,7 @@ function renderMesas(){
     <div class="sector-bloque">
       <div class="sector-titulo">${sector}</div>
       <div class="mapa-mesas">
-        ${porSector[sector].map(m => `<div class="mesa-celda" onclick="elegirMesa('${m.mesa}')"><span class="num">${m.mesa}</span></div>`).join('')}
+        ${porSector[sector].map(m => `<div class="mesa-celda ${isSiJs(m.ocupada)?'ocupada':'libre'}" onclick="elegirMesa('${m.mesa}')"><span class="num">${m.mesa}</span></div>`).join('')}
       </div>
     </div>`).join('');
 }
@@ -820,9 +832,9 @@ function npBuildItemsForApi(lines){
   });
 }
 
-// A diferencia de nano-panel (que después de confirmar vuelve a la lista de pedidos), acá el
-// mozo se queda en la misma mesa con el carrito vacío — así puede cargar otra ronda enseguida
-// sin tener que volver a elegirla. "Cambiar de mesa" (arriba) es la salida explícita.
+// Al confirmar, vuelve a la lista de mesas (y la refresca) en vez de quedarse en la mesa —
+// así queda a la vista, marcada como ocupada, igual que en el mapa de mesas del panel. Para
+// cargar otra ronda a la misma mesa, el mozo la vuelve a tocar desde la lista.
 function confirmarPedido(){
   if(uiBloqueada) return;
   const lines = npAllCartLines();
@@ -838,11 +850,12 @@ function confirmarPedido(){
       return;
     }
     const mesaEnviada = pedido.mesa;
-    pedido.cart = {};
-    pedido.comboCart = [];
     cerrarRevisionPedido();
-    renderNpGrid();
+    document.getElementById('vistaProductos').style.display = 'none';
+    document.getElementById('vistaMesas').style.display = 'block';
+    pedido = { mesa: null, cart: {}, comboCart: [] };
     updateNpCartbar();
+    cargarMesas();
     showToast(`Pedido enviado — Mesa ${mesaEnviada}`);
   }).finally(() => { unlockUI(); btn.textContent = 'Confirmar y enviar'; });
 }
