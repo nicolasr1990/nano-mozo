@@ -28,6 +28,7 @@
     --accent:#D6A02E; --accent-light:#E8BE5C; --accent-soft:#F5E3B4;
     --tipo-mesa:#C98A00; --tipo-mesa-bg:#FFF1D1; --tipo-mesa-border:#EFC358; --tipo-mesa-ink:#5C3E00;
     --success:#178A46; --success-bg:#D6F4E2; --success-border:#7FDBA6;
+    --warning:#B4740A; --warning-bg:#FFEBB0; --warning-border:#F0C55C;
     --danger:#D42F22; --danger-bg:#FCE0DC; --danger-border:#F2A398;
     --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --radius-xl:30px;
     --shadow-sm:0 1px 3px rgba(29,25,17,0.06); --shadow-md:0 10px 26px rgba(29,25,17,0.12);
@@ -100,6 +101,37 @@
   .mesas-leyenda span{display:flex;align-items:center;gap:6px}
   .mesas-leyenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .empty-state{color:var(--ink-muted);text-align:center;padding:60px 20px;font-size:14px}
+
+  /* ---------- Toggle Mesas / Pedidos ---------- */
+  .top-tabs{display:flex;gap:8px;margin-bottom:18px}
+  .top-tabs button{
+    flex:1;padding:11px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);
+    color:var(--ink-secondary);font-family:var(--body);font-weight:700;font-size:13.5px;cursor:pointer;
+  }
+  .top-tabs button.active{background:var(--accent);border-color:var(--accent);color:#1D1911}
+
+  /* ---------- Pedidos (solo lectura — ver, no tocar estados) ---------- */
+  .mesa-group{margin-bottom:20px}
+  .mesa-group-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
+  .mesa-group-head .titulo{font-family:var(--display);font-weight:800;font-size:15px;color:var(--ink)}
+  .mesa-group-head .total{font-family:var(--display);font-size:15px;color:var(--tipo-mesa-ink);font-weight:800}
+  .order-card{
+    background:var(--surface);border:1.5px solid var(--border-soft);border-radius:var(--radius-lg);
+    padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow-sm);
+  }
+  .order-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+  .order-card .head .src{font-family:var(--display);font-size:13px;font-weight:700;color:var(--ink)}
+  .status-pill{
+    font-family:var(--body);font-size:10.5px;padding:4px 10px;border-radius:var(--radius-xl);font-weight:800;
+    letter-spacing:0.05em;text-transform:uppercase;flex-shrink:0;
+  }
+  .status-pill.nuevo{background:var(--danger);color:#fff}
+  .status-pill.prep{background:var(--warning);color:#fff}
+  .status-pill.listo{background:var(--success);color:#fff}
+  .order-card ul{list-style:none;padding:0;margin:0}
+  .order-card li{padding:6px 0;border-bottom:1px solid var(--border-soft);font-size:13.5px;color:var(--ink)}
+  .order-card li:last-child{border-bottom:none}
+  .order-card li .note{display:block;font-size:11px;color:var(--accent);margin-top:2px;font-weight:600}
 
   /* ---------- Armar pedido (portado de nano-panel/index.html, sección "Nuevo pedido") ---------- */
   .np-mesa-actual{
@@ -264,22 +296,41 @@
 
 <div id="app">
 
-  <div id="vistaMesas">
-    <div class="mesas-head">
-      <h1>Mesas</h1>
-      <button class="refresh-btn" onclick="cargarMesas()">Actualizar</button>
+  <div id="vistaListado">
+    <div class="top-tabs" id="topTabs">
+      <button class="active" id="tabMesasBtn" onclick="mostrarTabMesas()">🪑 Mesas</button>
+      <button id="tabPedidosBtn" onclick="mostrarTabPedidos()">📋 Pedidos</button>
     </div>
-    <div class="mesas-leyenda">
-      <span><i style="background:var(--success-bg);border:1.5px solid var(--success-border)"></i>Libre</span>
-      <span><i style="background:var(--tipo-mesa-bg);border:1.5px solid var(--tipo-mesa-border)"></i>Ocupada</span>
+
+    <div id="vistaMesas">
+      <div class="mesas-head">
+        <h1>Mesas</h1>
+        <button class="refresh-btn" onclick="cargarMesas()">Actualizar</button>
+      </div>
+      <div class="mesas-leyenda">
+        <span><i style="background:var(--success-bg);border:1.5px solid var(--success-border)"></i>Libre</span>
+        <span><i style="background:var(--tipo-mesa-bg);border:1.5px solid var(--tipo-mesa-border)"></i>Ocupada</span>
+      </div>
+      <div id="mesasGrid"><div class="empty-state">Cargando mesas…</div></div>
     </div>
-    <div id="mesasGrid"><div class="empty-state">Cargando mesas…</div></div>
+
+    <div id="vistaPedidosGlobal" style="display:none">
+      <div class="mesas-head">
+        <h1>Pedidos</h1>
+        <button class="refresh-btn" onclick="cargarPedidosGlobal()">Actualizar</button>
+      </div>
+      <div id="pedidosGlobalLista"><div class="empty-state">Cargando pedidos…</div></div>
+    </div>
   </div>
 
   <div id="vistaProductos" style="display:none">
     <div class="np-mesa-actual">
       Pedido para <b id="npMesaLabel">—</b>
       <a href="#" onclick="volverAMesas();return false;">cambiar de mesa</a>
+    </div>
+    <div id="npPedidosMesaWrap" style="display:none">
+      <div class="np-cat-heading" style="font-size:14px;margin:0 0 8px">Ya pedido en esta mesa</div>
+      <div id="npPedidosMesaLista"></div>
     </div>
     <div class="np-cats" id="npCats"></div>
     <div class="np-cat-heading" id="npCatHeading"></div>
@@ -483,6 +534,95 @@ function renderMesas(){
     </div>`).join('');
 }
 
+/* ======================= VER PEDIDOS (solo lectura — nada de tomar/marcar listo desde acá,
+   eso se queda en nano-panel para no tener dos apps cambiando el mismo estado) ======================= */
+const STATUS_LABEL = { nuevo:'NUEVO', prep:'EN PREPARACIÓN', listo:'LISTO' };
+let pedidosMesaData = [];
+let pedidosGlobalTimer = null;
+
+function fetchPedidosMesa(){
+  return fetchGetProtegido('listarPedidosMesa').then(res => {
+    if(res.ok) pedidosMesaData = res.pedidos;
+    return res;
+  });
+}
+
+function agruparPedidosPorMesa(pedidos){
+  const mesas = {};
+  pedidos.forEach(o => { (mesas[o.mesa] = mesas[o.mesa] || []).push(o); });
+  return mesas;
+}
+
+function ordenCardHtml(o){
+  return `<div class="order-card">
+    <div class="head">
+      <span class="src">#${o.id_pedido.slice(-4)}</span>
+      <span class="status-pill ${o.estado}">${STATUS_LABEL[o.estado]||o.estado}</span>
+    </div>
+    <ul>${o.items.map(i => `<li>${i.cantidad}× ${esc(i.nombre)}${i.nota?`<span class="note">📝 ${esc(i.nota)}</span>`:''}</li>`).join('')}</ul>
+  </div>`;
+}
+
+function renderPedidosGlobal(){
+  const el = document.getElementById('pedidosGlobalLista');
+  if(!pedidosMesaData.length){ el.innerHTML = '<div class="empty-state">No hay pedidos activos</div>'; return; }
+  const mesas = agruparPedidosPorMesa(pedidosMesaData);
+  el.innerHTML = Object.keys(mesas).sort((a,b) => Number(a)-Number(b)).map(mesaNum => {
+    const rondas = mesas[mesaNum];
+    const total = rondas.reduce((s,r) => s + Number(r.total), 0);
+    return `<div class="mesa-group">
+      <div class="mesa-group-head">
+        <span class="titulo">Mesa ${mesaNum} · ${rondas.length} ronda${rondas.length===1?'':'s'}</span>
+        <span class="total">${formatPrecio(total)}</span>
+      </div>
+      ${rondas.map(ordenCardHtml).join('')}
+    </div>`;
+  }).join('');
+}
+
+function cargarPedidosGlobal(){
+  fetchPedidosMesa().then(res => {
+    if(!res.ok){ document.getElementById('pedidosGlobalLista').innerHTML = '<div class="empty-state">No se pudieron cargar los pedidos</div>'; return; }
+    renderPedidosGlobal();
+  });
+}
+
+function iniciarPollPedidosGlobal(){
+  detenerPollPedidosGlobal();
+  pedidosGlobalTimer = setInterval(cargarPedidosGlobal, 8000);
+}
+function detenerPollPedidosGlobal(){
+  if(pedidosGlobalTimer){ clearInterval(pedidosGlobalTimer); pedidosGlobalTimer = null; }
+}
+
+function mostrarTabMesas(){
+  detenerPollPedidosGlobal();
+  npSetActiveBtn('tabMesasBtn', ['tabMesasBtn','tabPedidosBtn']);
+  document.getElementById('vistaPedidosGlobal').style.display = 'none';
+  document.getElementById('vistaMesas').style.display = 'block';
+  cargarMesas();
+}
+
+function mostrarTabPedidos(){
+  npSetActiveBtn('tabPedidosBtn', ['tabMesasBtn','tabPedidosBtn']);
+  document.getElementById('vistaMesas').style.display = 'none';
+  document.getElementById('vistaPedidosGlobal').style.display = 'block';
+  document.getElementById('pedidosGlobalLista').innerHTML = '<div class="empty-state">Cargando pedidos…</div>';
+  cargarPedidosGlobal();
+  iniciarPollPedidosGlobal();
+}
+
+// Resumen de lo que ya se pidió en ESTA mesa puntual, arriba de la grilla de productos — para
+// que el mozo vea de entrada qué rondas ya van antes de sumar una más.
+function renderPedidosDeMesa(mesa){
+  const rondas = pedidosMesaData.filter(o => String(o.mesa) === String(mesa));
+  const wrap = document.getElementById('npPedidosMesaWrap');
+  const lista = document.getElementById('npPedidosMesaLista');
+  if(!rondas.length){ wrap.style.display = 'none'; lista.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  lista.innerHTML = rondas.map(ordenCardHtml).join('');
+}
+
 /* ======================= ARMAR PEDIDO (portado casi verbatim de nano-panel, sección "Nuevo pedido") ======================= */
 let pedido = { mesa: null, cart: {}, comboCart: [] };
 let menuData = { categorias: [], productos: [] };
@@ -495,20 +635,22 @@ function hayPedidoSinConfirmar(){
 
 function elegirMesa(mesa){
   pedido = { mesa, cart: {}, comboCart: [] };
-  document.getElementById('vistaMesas').style.display = 'none';
+  document.getElementById('vistaListado').style.display = 'none';
   document.getElementById('vistaProductos').style.display = 'block';
   document.getElementById('npMesaLabel').textContent = 'Mesa ' + mesa;
+  document.getElementById('npPedidosMesaWrap').style.display = 'none';
   updateNpCartbar();
   cargarMenu();
+  fetchPedidosMesa().then(() => renderPedidosDeMesa(mesa));
 }
 
 function volverAMesas(){
   const ir = () => {
     document.getElementById('vistaProductos').style.display = 'none';
-    document.getElementById('vistaMesas').style.display = 'block';
+    document.getElementById('vistaListado').style.display = 'block';
     pedido = { mesa: null, cart: {}, comboCart: [] };
     updateNpCartbar();
-    cargarMesas();
+    mostrarTabMesas();
   };
   if(!hayPedidoSinConfirmar()){ ir(); return; }
   uiConfirm('Tenés ítems sin enviar en esta mesa, ¿salir igual y perderlos?').then(ok => { if(ok) ir(); });
@@ -703,18 +845,24 @@ function npAddHalf(catId){
 }
 
 function npRenderDocenaCard(cat){
+  // El producto "por unidad" de la categoría (ej. "EMPANADA POR UNIDAD") no es un sabor para
+  // armar una docena — si se cuela acá, el precio de la docena sale calculado con el precio
+  // por unidad, mal. Se carga por su cuenta desde la lista de arriba, o con el tamaño "Por
+  // unidad" de esta misma tarjeta.
+  const porUnidadProducto = npItemsOf(cat.id).find(o => /por unidad/i.test(o.nombre));
   const opts = npItemsOf(cat.id).filter(p => !/por unidad/i.test(p.nombre));
   if(!opts.length) return '';
   const grupoCoccion = opcionesRequeridas(cat.id, '')?.[0] || null;
-  docenaState[cat.id] = { tamano:'docena', modo:'sabor', opcion:'', variedad:[] };
+  docenaState[cat.id] = { tamano:'docena', modo:'sabor', opcion:'', variedad:[], porUnidad:[] };
   return `<div class="np-combo-card">
     <h4>🥟 Armá tu pedido</h4>
     <p>Los precios de la lista son por docena. Elegí el tamaño y, si querés, combiná sabores.</p>
     <div class="np-combo-toggle">
       <button class="active" id="npDocSize-docena-${cat.id}" onclick="npSetDocenaSize('${cat.id}','docena')">Docena</button>
       <button id="npDocSize-media-${cat.id}" onclick="npSetDocenaSize('${cat.id}','media')">Media docena</button>
+      ${porUnidadProducto ? `<button id="npDocSize-unidad-${cat.id}" onclick="npSetDocenaSize('${cat.id}','unidad')">Por unidad</button>` : ''}
     </div>
-    <div class="np-combo-toggle">
+    <div class="np-combo-toggle" id="npDocModoToggle-${cat.id}">
       <button class="active" id="npDocModo-sabor-${cat.id}" onclick="npSetDocenaModo('${cat.id}','sabor')">Un solo sabor</button>
       <button id="npDocModo-mitad-${cat.id}" onclick="npSetDocenaModo('${cat.id}','mitad')">Mitad y mitad</button>
       <button id="npDocModo-variedad-${cat.id}" onclick="npSetDocenaModo('${cat.id}','variedad')">Combinar variedad</button>
@@ -752,6 +900,27 @@ function npRenderDocenaCard(cat){
       <div id="npVarLista-${cat.id}"></div>
       <div id="npVarContador-${cat.id}" style="font-size:12.5px;color:var(--ink-muted);margin:2px 0 10px"></div>
     </div>
+    <!-- "Por unidad": cada línea es un sabor+cocción+cantidad suelta, sin empaquetar en
+         docena/media docena y sin tope — el pedido final manda un solo ítem con la cantidad
+         TOTAL de unidades (para que el comprobante diga "8× Empanadas") y el desglose real en
+         la aclaración, igual que "Combinar variedad". Ver npAddDocena. -->
+    <div id="npUnidadWrap-${cat.id}" style="display:none;">
+      <div class="np-combo-row">
+        <select id="npUnidadSabor-${cat.id}">${opts.map(o=>`<option value="${o.id}">${o.nombre}</option>`).join('')}</select>
+      </div>
+      ${grupoCoccion ? `<div class="np-combo-row">
+        <select id="npUnidadOpcion-${cat.id}">
+          <option value="" selected disabled>${grupoCoccion.label}</option>
+          ${grupoCoccion.opciones.map(o=>`<option value="${o}">${o}</option>`).join('')}
+        </select>
+      </div>` : ''}
+      <div class="np-combo-row">
+        <input type="number" id="npUnidadCantidad-${cat.id}" min="1" step="1" placeholder="Cantidad" style="width:100%">
+      </div>
+      <button class="np-add-btn" style="width:100%;margin-bottom:8px" onclick="npAgregarLineaUnidad('${cat.id}')">+ Agregar línea</button>
+      <div id="npUnidadLista-${cat.id}"></div>
+      <div id="npUnidadContador-${cat.id}" style="font-size:12.5px;color:var(--ink-muted);margin:2px 0 10px"></div>
+    </div>
     <div class="np-combo-foot">
       <b id="npDocPrice-${cat.id}">${formatPrecio(opts[0].precio)}</b>
       <button class="np-add-btn" id="npDocAddBtn-${cat.id}" onclick="npAddDocena('${cat.id}')">Agregar</button>
@@ -764,9 +933,27 @@ function npSetActiveBtn(activeId, allIds){ allIds.forEach(id => { const el = doc
 
 function npSetDocenaSize(catId, tamano){
   docenaState[catId].tamano = tamano;
-  npSetActiveBtn('npDocSize-'+tamano+'-'+catId, ['npDocSize-docena-'+catId,'npDocSize-media-'+catId]);
-  npUpdateDocenaPrice(catId);
-  npRenderVariedadLista(catId);
+  npSetActiveBtn('npDocSize-'+tamano+'-'+catId, ['npDocSize-docena-'+catId,'npDocSize-media-'+catId,'npDocSize-unidad-'+catId]);
+
+  const esUnidad = tamano === 'unidad';
+  const modoToggle = document.getElementById('npDocModoToggle-'+catId);
+  if(modoToggle) modoToggle.style.display = esUnidad ? 'none' : 'flex';
+  document.getElementById('npUnidadWrap-'+catId).style.display = esUnidad ? 'block' : 'none';
+
+  if(esUnidad){
+    // "Por unidad" no usa ninguna de las filas de sabor/mitad/variedad de arriba — son de las
+    // otras dos modalidades (empaquetadas por docena).
+    document.getElementById('npDocSaborWrap-'+catId).style.display = 'none';
+    document.getElementById('npDocBWrap-'+catId).style.display = 'none';
+    const opcionWrap = document.getElementById('npDocOpcionWrap-'+catId);
+    if(opcionWrap) opcionWrap.style.display = 'none';
+    document.getElementById('npDocVariedadWrap-'+catId).style.display = 'none';
+    npRenderUnidadLista(catId);
+  } else {
+    // Volver a Docena/Media docena: restaurar la visibilidad según el modo (sabor/mitad/
+    // variedad) que ya estaba elegido antes de pasar por "Por unidad".
+    npSetDocenaModo(catId, docenaState[catId].modo);
+  }
 }
 
 function npSetDocenaModo(catId, modo){
@@ -842,10 +1029,81 @@ function npQuitarLineaVariedad(catId, idx){
   npRenderVariedadLista(catId);
 }
 
+// "Por unidad": sin empaquetar en docena/media docena y sin tope de cantidad — cada línea es
+// un sabor+cocción sueltos, el total de unidades se cobra al precio de "EMPANADA POR UNIDAD"
+// (no al precio por docena). Ver npAddDocena para cómo se arma el ítem final.
+function npRenderUnidadLista(catId){
+  const st = docenaState[catId];
+  const porUnidadProducto = npItemsOf(catId).find(o => /por unidad/i.test(o.nombre));
+  const precioUnidad = porUnidadProducto ? Number(porUnidadProducto.precio) : 0;
+  const totalUnidades = st.porUnidad.reduce((s,l) => s + l.cantidad, 0);
+
+  const lista = document.getElementById('npUnidadLista-'+catId);
+  if(lista){
+    lista.innerHTML = st.porUnidad.map((l,i) => `<div class="np-review-item" style="padding:6px 0">
+        <span class="nom">${l.cantidad}× ${esc(l.nombre)}${l.opcion?` (${esc(l.opcion)})`:''}</span>
+        <button class="del" onclick="npQuitarLineaUnidad('${catId}',${i})">✕</button>
+      </div>`).join('');
+  }
+  const contador = document.getElementById('npUnidadContador-'+catId);
+  if(contador) contador.textContent = totalUnidades > 0 ? `${totalUnidades} unidad${totalUnidades===1?'':'es'} agregadas` : '';
+
+  const precioEl = document.getElementById('npDocPrice-'+catId);
+  if(precioEl) precioEl.textContent = formatPrecio(totalUnidades * precioUnidad);
+  const addBtn = document.getElementById('npDocAddBtn-'+catId);
+  if(addBtn) addBtn.disabled = st.porUnidad.length === 0;
+}
+
+function npAgregarLineaUnidad(catId){
+  const st = docenaState[catId];
+  const productoId = document.getElementById('npUnidadSabor-'+catId).value;
+  const producto = npFindProducto(productoId);
+  const grupoCoccion = opcionesRequeridas(catId, '')?.[0] || null;
+  let opcion = '';
+  if(grupoCoccion){
+    opcion = document.getElementById('npUnidadOpcion-'+catId).value;
+    if(!opcion){ showToast('Elegí si esa parte va al horno o frita'); return; }
+  }
+  const cantidadInput = document.getElementById('npUnidadCantidad-'+catId);
+  const cantidad = parseInt(cantidadInput.value, 10);
+  if(!Number.isInteger(cantidad) || cantidad <= 0){ showToast('Ingresá una cantidad válida'); return; }
+  st.porUnidad.push({ productoId, nombre: producto.nombre, cantidad, opcion });
+  cantidadInput.value = '';
+  if(grupoCoccion) document.getElementById('npUnidadOpcion-'+catId).value = '';
+  npRenderUnidadLista(catId);
+}
+
+function npQuitarLineaUnidad(catId, idx){
+  docenaState[catId].porUnidad.splice(idx, 1);
+  npRenderUnidadLista(catId);
+}
+
 function npAddDocena(catId){
   const st = docenaState[catId];
   const cat = menuData.categorias.find(c => c.id === catId);
   const esMedia = st.tamano === 'media';
+
+  if(st.tamano === 'unidad'){
+    if(st.porUnidad.length === 0){ showToast('Agregá al menos una línea'); return; }
+    const porUnidadProducto = npItemsOf(catId).find(o => /por unidad/i.test(o.nombre));
+    if(!porUnidadProducto){ showToast('No hay un producto "por unidad" cargado para esta categoría'); return; }
+    const totalUnidades = st.porUnidad.reduce((s,l) => s + l.cantidad, 0);
+    // qty = la cantidad TOTAL de unidades (no 1 como en las otras modalidades) — así el
+    // comprobante imprime "8× Empanadas" solo, con el desglose real (sabor y cocción de cada
+    // una) en la aclaración de abajo, bien visible.
+    const desc = st.porUnidad.map(l => `${l.cantidad}× ${l.nombre}${l.opcion?` (${l.opcion})`:''}`).join(' · ');
+    const key = 'porunidad-' + catId + '-' + Math.random().toString(36).slice(2,10);
+    pedido.comboCart.push({
+      key, aId: porUnidadProducto.id, bId:'', esPorUnidadPanel:true,
+      name: cat ? cat.nombre : 'Unidades', price: Number(porUnidadProducto.precio), qty: totalUnidades,
+      catName: cat?cat.nombre:'', desc,
+    });
+    updateNpCartbar();
+    showToast('Agregado al pedido');
+    st.porUnidad = [];
+    npRenderUnidadLista(catId);
+    return;
+  }
 
   if(st.modo === 'variedad'){
     const capacidad = esMedia ? 6 : 12;
@@ -945,7 +1203,7 @@ function npRemoveLine(key){
 function npBuildItemsForApi(lines){
   return lines.map(l => {
     if(l.aId){
-      return { producto_id:l.aId, cantidad:l.qty, nota:l.desc||'', es_mitad_y_mitad:!!l.bId, combinado_con:l.bId||'', es_media_docena:!!l.esMediaDocena, es_variedad:!!l.esVariedad };
+      return { producto_id:l.aId, cantidad:l.qty, nota:l.desc||'', es_mitad_y_mitad:!!l.bId, combinado_con:l.bId||'', es_media_docena:!!l.esMediaDocena, es_variedad:!!l.esVariedad, es_por_unidad_panel:!!l.esPorUnidadPanel };
     }
     return { producto_id:l.key, cantidad:l.qty, nota:l.desc||'', es_mitad_y_mitad:false, combinado_con:'', es_media_docena:false };
   });
@@ -971,10 +1229,10 @@ function confirmarPedido(){
     const mesaEnviada = pedido.mesa;
     cerrarRevisionPedido();
     document.getElementById('vistaProductos').style.display = 'none';
-    document.getElementById('vistaMesas').style.display = 'block';
+    document.getElementById('vistaListado').style.display = 'block';
     pedido = { mesa: null, cart: {}, comboCart: [] };
     updateNpCartbar();
-    cargarMesas();
+    mostrarTabMesas();
     showToast(`Pedido enviado — Mesa ${mesaEnviada}`);
   }).finally(() => { unlockUI(); btn.textContent = 'Confirmar y enviar'; });
 }
