@@ -1154,7 +1154,14 @@ function npAllCartLines(){
     const opciones = entry.opciones || [];
     const desc = [...opciones, entry.note].filter(Boolean).join(' · ');
     const faltaOpcion = !!grupos && grupos.some((g,i) => !opciones[i]);
-    return { key:id, name:item.nombre, desc, price:Number(item.precio), qty:entry.qty, catName: cat?cat.nombre:'', faltaOpcion };
+    // Si la categoría se vende por docena (ej. Empanadas) y esto no es el producto "por
+    // unidad", cada unidad de la lista de arriba es en realidad UNA DOCENA — mismo criterio
+    // que ya usa el backend al armar el nombre del comprobante (ver crearPedidoInterno), pero
+    // acá hace falta que se vea ANTES de mandar el pedido, para que el mozo no lo confunda
+    // con una unidad suelta.
+    const esPorUnidad = /por unidad/i.test(item.nombre);
+    const nombre = (cat?.vendido_por_docena && !esPorUnidad) ? 'Docena de ' + item.nombre : item.nombre;
+    return { key:id, name:nombre, desc, price:Number(item.precio), qty:entry.qty, catName: cat?cat.nombre:'', faltaOpcion };
   });
   return [...regular, ...pedido.comboCart];
 }
@@ -1178,7 +1185,7 @@ function abrirRevisionPedido(){
   el.innerHTML = lines.length === 0
     ? '<div class="empty-state">Todavía no agregaste nada</div>'
     : lines.map(l => `<div class="np-review-item">
-        <span class="nom">${l.qty}× ${l.catName ? `<span style="color:var(--ink-muted);font-weight:600">${l.catName}</span> - ` : ''}${l.name}${l.desc?`<span class="nota">📝 ${l.desc}</span>`:''}${l.faltaOpcion?`<span class="nota" style="color:#c0392b">⚠ Falta elegir una opción — volvé a la lista y seleccionala</span>`:''}</span>
+        <span class="nom">${l.qty}× ${l.name}${l.desc?`<span class="nota">📝 ${l.desc}</span>`:''}${l.faltaOpcion?`<span class="nota" style="color:#c0392b">⚠ Falta elegir una opción — volvé a la lista y seleccionala</span>`:''}</span>
         <span style="display:flex;align-items:center;gap:8px">${formatPrecio(l.price*l.qty)}<button class="del" onclick="npRemoveLine('${l.key}')">✕</button></span>
       </div>`).join('');
   document.getElementById('npRevisionTotal').textContent = formatPrecio(npCartTotal(lines));
