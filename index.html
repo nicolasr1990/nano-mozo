@@ -631,6 +631,7 @@ function mostrarTabMesas(){
   document.getElementById('vistaPedidosGlobal').style.display = 'none';
   document.getElementById('vistaMesas').style.display = 'block';
   cargarMesas();
+  refrescarMenuEnSegundoPlano();
 }
 
 function mostrarTabPedidos(){
@@ -699,6 +700,23 @@ function cargarMenu(){
       renderNpGrid();
     })
     .catch(() => showToast('No se pudo cargar el menú'));
+}
+
+// Se dispara al volver a la lista de mesas (mismo momento en que ya se refresca esa lista),
+// así un cambio de menú hecho desde el panel a mitad de turno (un plato que se dio de baja,
+// un precio nuevo) llega sin que el mozo tenga que cerrar y volver a abrir la app. Corre en
+// silencio en segundo plano — nunca pisa lo que ya hay en memoria si la consulta falla, y no
+// interrumpe con ningún cartel de error si no hay señal en ese momento puntual.
+function refrescarMenuEnSegundoPlano(){
+  fetchGet(`${WEBAPP_URL}?action=menu&canal=mesa`)
+    .then(r => r.json())
+    .then(res => {
+      if(res.categorias && res.productos){
+        menuData.categorias = res.categorias;
+        menuData.productos = res.productos;
+      }
+    })
+    .catch(() => {});
 }
 
 function npFindProducto(id){ return menuData.productos.find(p => p.id === id); }
