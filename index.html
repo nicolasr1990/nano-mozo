@@ -143,18 +143,42 @@
   .np-mesa-actual a{margin-left:auto;color:var(--accent);font-weight:700;text-decoration:none;font-size:12px}
 
   .np-cat-heading{font-family:var(--display);font-weight:800;font-size:18px;color:var(--ink);letter-spacing:-0.01em;margin:2px 0 12px}
-  .np-cats{
-    display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:0 -16px 0;padding-left:16px;padding-right:16px;
-    scrollbar-width:none;position:sticky;top:50px;background:var(--bg);z-index:15;
+
+  /* ---------- Riel de categorías: minimizado (solo íconos) a la izquierda, se expande
+     tipo vidrio esmerilado flotando sobre los productos, y se vuelve a minimizar solo al
+     elegir una categoría. ---------- */
+  .np-content-with-rail{padding-left:44px}
+  .cat-rail{
+    position:fixed;left:0;top:50px;bottom:0;width:52px;z-index:16;
+    background:var(--surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;
+    overflow-y:auto;overflow-x:hidden;scrollbar-width:none;
+    transition:width .28s cubic-bezier(.4,0,.2,1),background .28s;
   }
-  .np-cats::-webkit-scrollbar{display:none}
-  .np-cats button{
-    flex:0 0 auto;display:flex;align-items:center;gap:7px;font-family:var(--body);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:var(--radius-xl);
-    border:1.5px solid var(--border);background:var(--surface);color:var(--ink-secondary);cursor:pointer;
-    transition:var(--transition);white-space:nowrap;box-shadow:var(--shadow-sm);
+  .cat-rail::-webkit-scrollbar{display:none}
+  .cat-rail.expanded{
+    width:230px;align-items:stretch;padding:14px 12px;
+    background:rgba(247,242,230,0.7);
+    -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+    box-shadow:10px 0 34px rgba(29,25,17,0.22);
   }
-  .np-cats .np-cat-ico{font-size:15px;line-height:1}
-  .np-cats button.active{background:var(--accent);border-color:var(--accent);color:#1D1911}
+  .cat-rail-backdrop{position:fixed;inset:0;z-index:15;background:rgba(0,0,0,0.001)}
+  .cat-rail-toggle{
+    width:34px;height:34px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--border);
+    background:var(--surface);color:var(--ink-secondary);font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;margin-bottom:6px;
+  }
+  .cat-rail.expanded .cat-rail-toggle{align-self:flex-end}
+  .cat-rail-item{
+    display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:9px 0;
+    border-radius:var(--radius-md);border:none;background:transparent;color:var(--ink-secondary);
+    cursor:pointer;font-family:var(--body);font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;
+  }
+  .cat-rail.expanded .cat-rail-item{justify-content:flex-start;padding:9px 8px}
+  .cat-rail-item .ico{font-size:19px;line-height:1;flex-shrink:0}
+  .cat-rail-item .lbl{display:none;overflow:hidden;text-overflow:ellipsis}
+  .cat-rail.expanded .cat-rail-item .lbl{display:inline}
+  .cat-rail-item.active{background:var(--accent);color:#1D1911}
 
   /* Una sola columna, tarjetas grandes — a diferencia de nano-panel (que tenía grilla de
      escritorio), acá cada producto es una fila completa pensada para el pulgar. */
@@ -324,17 +348,23 @@
   </div>
 
   <div id="vistaProductos" style="display:none">
-    <div class="np-mesa-actual">
-      Pedido para <b id="npMesaLabel">—</b>
-      <a href="#" onclick="volverAMesas();return false;">cambiar de mesa</a>
+    <div class="cat-rail-backdrop" id="catRailBackdrop" style="display:none" onclick="colapsarCatRail()"></div>
+    <div class="cat-rail" id="catRail">
+      <button class="cat-rail-toggle" id="catRailToggle" onclick="toggleCatRail()">☰</button>
+      <div id="catRailItems"></div>
     </div>
-    <div id="npPedidosMesaWrap" style="display:none">
-      <div class="np-cat-heading" style="font-size:14px;margin:0 0 8px">Ya pedido en esta mesa</div>
-      <div id="npPedidosMesaLista"></div>
+    <div class="np-content-with-rail">
+      <div class="np-mesa-actual">
+        Pedido para <b id="npMesaLabel">—</b>
+        <a href="#" onclick="volverAMesas();return false;">cambiar de mesa</a>
+      </div>
+      <div id="npPedidosMesaWrap" style="display:none">
+        <div class="np-cat-heading" style="font-size:14px;margin:0 0 8px">Ya pedido en esta mesa</div>
+        <div id="npPedidosMesaLista"></div>
+      </div>
+      <div class="np-cat-heading" id="npCatHeading"></div>
+      <div class="np-grid" id="npGrid"></div>
     </div>
-    <div class="np-cats" id="npCats"></div>
-    <div class="np-cat-heading" id="npCatHeading"></div>
-    <div class="np-grid" id="npGrid"></div>
   </div>
 
 </div>
@@ -639,6 +669,7 @@ function elegirMesa(mesa){
   document.getElementById('vistaProductos').style.display = 'block';
   document.getElementById('npMesaLabel').textContent = 'Mesa ' + mesa;
   document.getElementById('npPedidosMesaWrap').style.display = 'none';
+  colapsarCatRail();
   updateNpCartbar();
   cargarMenu();
   fetchPedidosMesa().then(() => renderPedidosDeMesa(mesa));
@@ -707,17 +738,36 @@ function npCatEmoji(id, nombre){
 }
 
 function renderNpCats(){
-  document.getElementById('npCats').innerHTML = menuData.categorias.map(c =>
-    `<button class="${c.id===catActiva?'active':''}" onclick="npSetCat('${c.id}')"><span class="np-cat-ico">${npCatEmoji(c.id, c.nombre)}</span><span>${c.nombre}</span></button>`
+  document.getElementById('catRailItems').innerHTML = menuData.categorias.map(c =>
+    `<button class="cat-rail-item ${c.id===catActiva?'active':''}" onclick="npSetCat('${c.id}')">
+      <span class="ico">${npCatEmoji(c.id, c.nombre)}</span><span class="lbl">${c.nombre}</span>
+    </button>`
   ).join('');
   const activa = menuData.categorias.find(c => c.id === catActiva);
   document.getElementById('npCatHeading').textContent = activa ? activa.nombre : '';
+}
+
+// El riel arranca minimizado (solo íconos); tocar el "☰" (o afuera, con el backdrop) lo
+// expande tipo vidrio esmerilado flotando sobre los productos. Elegir una categoría lo
+// vuelve a minimizar solo, para no tapar la grilla mientras se arma el pedido.
+function toggleCatRail(){
+  const rail = document.getElementById('catRail');
+  const expandiendo = !rail.classList.contains('expanded');
+  rail.classList.toggle('expanded', expandiendo);
+  document.getElementById('catRailBackdrop').style.display = expandiendo ? 'block' : 'none';
+  document.getElementById('catRailToggle').textContent = expandiendo ? '✕' : '☰';
+}
+function colapsarCatRail(){
+  document.getElementById('catRail').classList.remove('expanded');
+  document.getElementById('catRailBackdrop').style.display = 'none';
+  document.getElementById('catRailToggle').textContent = '☰';
 }
 
 function npSetCat(id){
   catActiva = id;
   renderNpCats();
   renderNpGrid();
+  colapsarCatRail();
 }
 
 function renderNpGrid(){
