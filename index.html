@@ -720,7 +720,10 @@ function refrescarMenuEnSegundoPlano(){
 }
 
 function npFindProducto(id){ return menuData.productos.find(p => p.id === id); }
-function npItemsOf(catId){ return menuData.productos.filter(p => p.categoria_id === catId); }
+// Alfabético (no el orden en que vienen del backend) — así la lista para armar el pedido no
+// salta de lugar cada vez que se agrega un producto nuevo al menú. Alimenta la grilla y todos
+// los selects de las tarjetas de combo (docena, mitad y mitad, por unidad), todos parten de acá.
+function npItemsOf(catId){ return menuData.productos.filter(p => p.categoria_id === catId).sort((a,b) => a.nombre.localeCompare(b.nombre, 'es')); }
 
 // Aclaraciones obligatorias por categoría — tal cual nano-panel, no reinventar (si mañana
 // cambia el menú/las categorías de cocina, portar el cambio desde ahí).
