@@ -1,6 +1,6 @@
 {
-  "name": "Nano Mozo",
-  "short_name": "Nano Mozo",
+  "name": "Pedidos de Mozas",
+  "short_name": "Pedidos de Mozas",
   "description": "Cargar pedidos de mesa desde el celular — Nano Resto Bar",
   "id": "./index.html",
   "start_url": "./index.html",

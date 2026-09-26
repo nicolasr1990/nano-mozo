@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Nano Mozo</title>
+<title>Pedidos de Mozas</title>
 
 <!-- PWA: instalable en el celular del mozo, con ícono propio y sin la barra del navegador -->
 <link rel="manifest" href="manifest.json">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Nano Mozo">
+<meta name="apple-mobile-web-app-title" content="Pedidos de Mozas">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,6 +43,7 @@
     position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:14px 18px;
     display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:16px;
   }
+  .topbar-logo{height:30px;width:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
   .topbar .back{
     background:none;border:none;color:var(--accent-light);font-family:var(--body);font-weight:700;
     font-size:13px;cursor:pointer;padding:6px 0;
@@ -303,7 +304,7 @@
 
 <div id="gateOverlay" style="display:none">
   <div class="box">
-    <h2>Nano Mozo</h2>
+    <h2>Pedidos de Mozas</h2>
     <p>Ingresá la clave para cargar pedidos de mesa</p>
     <input type="password" id="gateInput" placeholder="Clave" autocomplete="off">
     <button class="entrar" onclick="intentarLoginMozo()">Entrar</button>
@@ -311,7 +312,7 @@
   </div>
 </div>
 
-<div class="topbar">🔥 Nano Mozo</div>
+<div class="topbar"><img src="logo.png" alt="Nano Resto Bar" class="topbar-logo"> Pedidos de Mozas</div>
 
 <div class="update-banner" id="updateBanner" style="display:none">
   <span>🔄 Hay una actualización lista</span>
@@ -393,7 +394,7 @@
 
 <div id="uiConfirmOverlay" class="np-overlay" style="display:none">
   <div class="np-review-box np-confirm-box">
-    <div class="np-review-head"><span>Nano Mozo</span></div>
+    <div class="np-review-head"><span>Pedidos de Mozas</span></div>
     <div class="np-confirm-msg" id="uiConfirmMsg"></div>
     <div class="np-confirm-acciones">
       <button class="ui-confirm-btn ui-confirm-btn-cancel" id="uiConfirmCancelBtn" onclick="uiConfirmResolver(false)">Cancelar</button>
